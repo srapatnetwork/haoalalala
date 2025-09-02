@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTMP Stream Controller</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #ff7700;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #ff7700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .control-panel {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(30, 30, 40, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .log-panel {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(30, 30, 40, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff7700;
+            color: #ff7700;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #222;
+            color: #fff;
+        }
+        
+        .range-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .range-container input {
+            flex: 1;
+        }
+        
+        .range-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ff7700;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #ff5500;
+        }
+        
+        button.stop {
+            background: #dc3545;
+        }
+        
+        button.stop:hover {
+            background: #bd2130;
+        }
+        
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            background: #111;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            min-height: 300px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .log-time {
+            color: #ff7700;
+            margin-right: 10px;
+        }
+        
+        .active-streams {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .stream-item {
+            padding: 10px;
+            background: rgba(255, 119, 0, 0.2);
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid #444;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-broadcast-tower"></i> RTMP Stream Controller</h1>
+            <p class="subtitle">Manage your video streams with dynamic parameters</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="control-panel">
+                <h2 class="panel-title"><i class="fas fa-sliders-h"></i> Stream Controls</h2>
+                
+                <div class="form-group">
+                    <label for="video-select"><i class="fas fa-film"></i> Select Video</label>
+                    <select id="video-select">
+                        <option value="">Loading videos...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="rtmp-url"><i class="fas fa-link"></i> RTMP URL</label>
+                    <input type="text" id="rtmp-url" placeholder="rtmp://example.com/app/stream">
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-tachometer-alt"></i> FPS Range</label>
+                    <div class="range-container">
+                        <input type="range" id="fps-min" min="10" max="60" value="25">
+                        <span id="fps-min-value" class="range-value">25</span>
+                        <span>to</span>
+                        <input type="range" id="fps-max" min="10" max="60" value="30">
+                        <span id="fps-max-value" class="range-value">30</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-database"></i> Bitrate Range (kbps)</label>
+                    <div class="range-container">
+                        <input type="range" id="bitrate-min" min="500" max="5000" value="1500" step="100">
+                        <span id="bitrate-min-value" class="range-value">1500</span>
+                        <span>to</span>
+                        <input type="range" id="bitrate-max" min="500" max="5000" value="2500" step="100">
+                        <span id="bitrate-max-value" class="range-value">2500</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-music"></i> Audio Bitrate Range (kbps)</label>
+                    <div class="range-container">
+                        <input type="range" id="audio-min" min="64" max="320" value="128" step="32">
+                        <span id="audio-min-value" class="range-value">128</span>
+                        <span>to</span>
+                        <input type="range" id="audio-max" min="64" max="320" value="192" step="32">
+                        <span id="audio-max-value" class="range-value">192</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-hourglass-half"></i> Segment Duration Range (seconds)</label>
+                    <div class="range-container">
+                        <input type="range" id="segment-min" min="2" max="30" value="10">
+                        <span id="segment-min-value" class="range-value">10</span>
+                        <span>to</span>
+                        <input type="range" id="segment-max" min="2" max="30" value="15">
+                        <span id="segment-max-value" class="range-value">15</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="preset"><i class="fas fa-cogs"></i> Encoding Preset</label>
+                    <select id="preset">
+                        <option value="ultrafast">Ultrafast</option>
+                        <option value="superfast">Superfast</option>
+                        <option value="veryfast" selected>Veryfast</option>
+                        <option value="faster">Faster</option>
+                        <option value="fast">Fast</option>
+                        <option value="medium">Medium</option>
+                        <option value="slow">Slow</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="resolution"><i class="fas fa-expand"></i> Resolution</label>
+                    <select id="resolution">
+                        <option value="1280x720">720p (HD)</option>
+                        <option value="1920x1080" selected>1080p (Full HD)</option>
+                        <option value="2560x1440">1440p (2K)</option>
+                        <option value="3840x2160">2160p (4K)</option>
+                    </select>
+                </div>
+                
+                <button id="start-btn"><i class="fas fa-play"></i> Start Streaming</button>
+                <button id="stop-btn" class="stop"><i class="fas fa-stop"></i> Stop All Streams</button>
+                
+                <div class="active-streams">
+                    <h3><i class="fas fa-stream"></i> Active Streams</h3>
+                    <div id="streams-list">
+                        <p class="no-streams">No active streams</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="log-panel">
+                <h2 class="panel-title"><i class="fas fa-terminal"></i> Real-time Logs</h2>
+                <div class="log-container" id="log-container">
+                    <div class="log-entry"><span class="log-time">[12:34:56]</span> System initialized. Ready to start streaming.</div>
+                    <div class="log-entry"><span class="log-time">[12:35:01]</span> Connected to server successfully.</div>
+                </div>
+                <button id="clear-logs"><i class="fas fa-broom"></i> Clear Logs</button>
+            </div>
+        </div>
+        
+        <footer>
+            <p>RTMP Stream Controller &copy; 2023 | Powered by Node.js, Express and Socket.IO</p>
+        </footer>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Socket.io connection
+            const socket = io();
+            
+            // DOM elements
+            const videoSelect = document.getElementById('video-select');
+            const logContainer = document.getElementById('log-container');
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const clearLogsBtn = document.getElementById('clear-logs');
+            const streamsList = document.getElementById('streams-list');
+            
+            // Range inputs
+            const fpsMin = document.getElementById('fps-min');
+            const fpsMax = document.getElementById('fps-max');
+            const fpsMinValue = document.getElementById('fps-min-value');
+            const fpsMaxValue = document.getElementById('fps-max-value');
+            
+            const bitrateMin = document.getElementById('bitrate-min');
+            const bitrateMax = document.getElementById('bitrate-max');
+            const bitrateMinValue = document.getElementById('bitrate-min-value');
+            const bitrateMaxValue = document.getElementById('bitrate-max-value');
+            
+            const audioMin = document.getElementById('audio-min');
+            const audioMax = document.getElementById('audio-max');
+            const audioMinValue = document.getElementById('audio-min-value');
+            const audioMaxValue = document.getElementById('audio-max-value');
+            
+            const segmentMin = document.getElementById('segment-min');
+            const segmentMax = document.getElementById('segment-max');
+            const segmentMinValue = document.getElementById('segment-min-value');
+            const segmentMaxValue = document.getElementById('segment-max-value');
+            
+            // Update range value displays
+            function updateRangeDisplay(input, display) {
+                input.addEventListener('input', function() {
+                    display.textContent = this.value;
+                });
+            }
+            
+            updateRangeDisplay(fpsMin, fpsMinValue);
+            updateRangeDisplay(fpsMax, fpsMaxValue);
+            updateRangeDisplay(bitrateMin, bitrateMinValue);
+            updateRangeDisplay(bitrateMax, bitrateMaxValue);
+            updateRangeDisplay(audioMin, audioMinValue);
+            updateRangeDisplay(audioMax, audioMaxValue);
+            updateRangeDisplay(segmentMin, segmentMinValue);
+            updateRangeDisplay(segmentMax, segmentMaxValue);
+            
+            // Fetch available videos
+            function loadVideos() {
+                fetch('/api/videos')
+                    .then(response => response.json())
+                    .then(data => {
+                        videoSelect.innerHTML = '';
+                        if (data.videos && data.videos.length > 0) {
+                            data.videos.forEach(video => {
+                                const option = document.createElement('option');
+                                option.value = video;
+                                option.textContent = video;
+                                videoSelect.appendChild(option);
+                            });
+                        } else {
+                            videoSelect.innerHTML = '<option value="">No videos found</option>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading videos:', error);
+                        videoSelect.innerHTML = '<option value="">Error loading videos</option>';
+                    });
+            }
+            
+            // Load videos on page load
+            loadVideos();
+            
+            // Handle start stream button
+            startBtn.addEventListener('click', function() {
+                const video = videoSelect.value;
+                const rtmp = document.getElementById('rtmp-url').value;
+                
+                if (!video || !rtmp) {
+                    appendLog('Please select a video and enter RTMP URL', true);
+                    return;
+                }
+                
+                const streamConfig = {
+                    video: video,
+                    rtmp: rtmp,
+                    fpsRange: [parseInt(fpsMin.value), parseInt(fpsMax.value)],
+                    bitrateRange: [parseInt(bitrateMin.value), parseInt(bitrateMax.value)],
+                    audioRange: [parseInt(audioMin.value), parseInt(audioMax.value)],
+                    segmentRange: [parseInt(segmentMin.value), parseInt(segmentMax.value)],
+                    preset: document.getElementById('preset').value,
+                    resolution: document.getElementById('resolution').value
+                };
+                
+                fetch('/api/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(streamConfig)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        appendLog(`Started stream with ID: ${data.streamId}`);
+                    } else {
+                        appendLog(`Error: ${data.message}`, true);
+                    }
+                })
+                .catch(error => {
+                    appendLog('Error starting stream: ' + error, true);
+                });
+            });
+            
+            // Handle stop stream button
+            stopBtn.addEventListener('click', function() {
+                // In a real implementation, we would need to know which stream to stop
+                // For this demo, we'll assume stopping all active streams
+                fetch('/api/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ streamId: 'all' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        appendLog('Stopped all streams');
+                    } else {
+                        appendLog(`Error: ${data.message}`, true);
+                    }
+                })
+                .catch(error => {
+                    appendLog('Error stopping streams: ' + error, true);
+                });
+            });
+            
+            // Clear logs button
+            clearLogsBtn.addEventListener('click', function() {
+                logContainer.innerHTML = '';
+                appendLog('Logs cleared');
+            });
+            
+            // Append log to log container
+            function appendLog(message, isError = false) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                if (isError) {
+                    logEntry.style.color = '#ff5555';
+                }
+                logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // Socket.io event listeners
+            socket.on('log_update', function(data) {
+                appendLog(data.message);
+            });
+            
+            // Initial log
+            appendLog('Web interface loaded. Ready to start streaming.');
+        });
+    </script>
+</body>
+</html>
